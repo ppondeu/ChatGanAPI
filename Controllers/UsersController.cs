@@ -39,6 +39,21 @@ namespace ChatApi.Controllers
             });
         }
 
+        [HttpGet("friends")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<UserResponse>>>> GetFriends()
+        {
+            var user = HttpContext.Items["user"] as User ?? throw new UnauthorizedError("User not found");
+            var friends = await _userService.GetFriends(user.Id);
+            var friendResponses = friends.Select(friend => new UserResponse(friend));
+            return Ok(new ApiResponse<IEnumerable<UserResponse>>
+            {
+                StatusCode = 200,
+                Errors = null,
+                Message = "Friends retrieved",
+                Data = friendResponses
+            });
+        }
+
         [HttpPatch]
         public async Task<ActionResult<ApiResponse<UserResponse>>> UpdateUser([FromBody] UserUpdateDto userUpdateDto)
         {

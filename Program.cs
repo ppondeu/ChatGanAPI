@@ -1,20 +1,26 @@
-using System;
 using ChatApi.Common.Filters;
 using ChatApi.Data;
 using ChatApi.Helpers;
+using ChatApi.Hubs;
 using ChatApi.Interfaces;
 using ChatApi.Middlewares;
 using ChatApi.Repositories;
 using ChatApi.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Scalar.AspNetCore;
+
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<JwtAccessTokenMiddleware>();
@@ -30,6 +36,21 @@ builder.Services.AddAuthentication().AddCookie(options =>
 {
     options.Cookie.SameSite = SameSiteMode.Strict;
 });
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173", "http://10.25.12.226:5173")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
+
+builder.Services.AddSignalR();
+
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<GlobalExceptionFilter>();
@@ -46,6 +67,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 var app = builder.Build();
 
+app.UseCors(MyAllowSpecificOrigins);
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -53,7 +76,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseWhen(context => context.Request.Path.StartsWithSegments("/api/users"), app =>
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/api/users") || context.Request.Path.StartsWithSegments("/api/chats"), app =>
 {
     app.UseMiddleware<JwtAccessTokenMiddleware>();
 });
@@ -63,7 +86,16 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/api/auth/refres
     app.UseMiddleware<JwtRefreshTokenMiddleware>();
 });
 
+
 app.UseHttpsRedirection();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Uploads")),
+    RequestPath = "/Attachments"
+});
+
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/chathub");
+
 app.Run();

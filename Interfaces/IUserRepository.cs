@@ -9,6 +9,7 @@ public interface IUserRepository
     Task<User?> GetUserByEmail(string email);
     Task<User?> GetUserByUsername(string username);
     Task<IEnumerable<User>> GetUsers();
+    Task<IEnumerable<User>> GetFriends(Guid userId);
     Task<User?> UpdateUser(Guid id, Dictionary<string, object> updates);
     Task<User?> DeleteUser(Guid id);
     Task<User?> GetUserByRefreshToken(string refreshToken);

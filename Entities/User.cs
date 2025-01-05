@@ -1,4 +1,4 @@
-using System;
+using System.Text.Json.Serialization;
 
 namespace ChatApi.Entities
 {
@@ -15,5 +15,10 @@ namespace ChatApi.Entities
         public DateTime? DeletedAt { get; set; }
         public string? Avatar { get; set; }
         public string? RefreshToken { get; set; }
+        [JsonIgnore]
+        public ICollection<Chat>? Chats { get; set; }
+        [JsonIgnore]
+        public ICollection<Message>? Messages { get; set; }
+        
     }
 }

@@ -492,3 +492,5 @@ Dockerfile
 # Setting json files
 appsettings.json
 appsettings.Development.json
+
+/Uploads/*
