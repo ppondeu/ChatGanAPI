@@ -2,7 +2,6 @@ using ChatApi.DTOs;
 using ChatApi.Entities;
 
 namespace ChatApi.Interfaces;
-
 public interface IAuthService
 {
     Task<AuthResponse> Login(LoginDto loginDto);

@@ -21,6 +21,11 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
         return await _context.Users.ToListAsync();
     }
 
+    public async Task<IEnumerable<User>> GetFriends(Guid userId)
+    {
+        return await _context.Users.Where(u => u.Id != userId).ToListAsync();
+    }
+
     public async Task<User?> DeleteUser(Guid id)
     {
         var existingUser = _context.Users.Find(id);
@@ -28,7 +33,7 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
         {
             return null;
         }
-        _context.Users.Remove(existingUser);
+        existingUser.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return existingUser;
     }

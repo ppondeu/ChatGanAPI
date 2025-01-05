@@ -10,7 +10,6 @@ namespace ChatApi.Controllers
     public class AuthController(IAuthService authService) : ControllerBase
     {
         private readonly IAuthService _authService = authService;
-        private readonly bool isHttps;
 
         [HttpPost("login")]
         public async Task<ActionResult<ApiResponse<UserResponse>>> Login([FromBody] LoginDto loginDto)
@@ -19,17 +18,19 @@ namespace ChatApi.Controllers
             Response.Cookies.Append("accessToken", user.Tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Secure = isHttps,
+                SameSite = SameSiteMode.Lax,
+                Secure = false,
                 Expires = DateTime.UtcNow.AddMinutes(45)
             });
+
             Response.Cookies.Append("refreshToken", user.Tokens.RefreshToken, new CookieOptions
             {
                 HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Secure = isHttps,
+                SameSite = SameSiteMode.Lax,
+                Secure = false,
                 Expires = DateTime.UtcNow.AddHours(4)
             });
+
             return Ok(new ApiResponse<UserResponse>
             {
                 StatusCode = 200,
@@ -46,15 +47,15 @@ namespace ChatApi.Controllers
             Response.Cookies.Append("accessToken", user.Tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Secure = isHttps,
+                SameSite = SameSiteMode.None,
+                Secure = true,
                 Expires = DateTime.UtcNow.AddMinutes(45)
             });
             Response.Cookies.Append("refreshToken", user.Tokens.RefreshToken, new CookieOptions
             {
                 HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Secure = isHttps,
+                SameSite = SameSiteMode.None,
+                Secure = true,
                 Expires = DateTime.UtcNow.AddHours(4)
             });
             return Created("api/auth/register", new ApiResponse<UserResponse>
@@ -87,22 +88,22 @@ namespace ChatApi.Controllers
             {
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
-                Secure = isHttps,
+                Secure = true,
                 Expires = DateTime.UtcNow.AddMinutes(45)
             });
             Response.Cookies.Append("refreshToken", existingUser.Tokens.RefreshToken, new CookieOptions
             {
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
-                Secure = isHttps,
+                Secure = true,
                 Expires = DateTime.UtcNow.AddHours(4)
             });
-            return Ok(new ApiResponse<UserResponse>
+            return Ok(new ApiResponse<TokenResponse>
             {
                 StatusCode = 200,
                 Errors = null,
                 Message = "Token refreshed",
-                Data = existingUser.User
+                Data = existingUser.Tokens
             });
         }
 

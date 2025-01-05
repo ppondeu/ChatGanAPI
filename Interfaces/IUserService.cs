@@ -8,6 +8,7 @@ public interface IUserService
 {
     Task<User> CreateUser(UserCreateDto userCreateDto);
     Task<IEnumerable<User>> GetUsers();
+    Task<IEnumerable<User>> GetFriends(Guid userId);
     Task<User> GetUserById(Guid id);
     Task<User> GetUserByEmail(string email);
     Task<User> GetUserByUsername(string username);

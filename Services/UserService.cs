@@ -39,6 +39,11 @@ public class UserService(IUserRepository userRepository, IPasswordHasher passwor
         return await _userRepository.GetUsers();
     }
 
+    public async Task<IEnumerable<User>> GetFriends(Guid userId)
+    {
+        return await _userRepository.GetFriends(userId);
+    }
+
     public async Task<User> GetUserById(Guid id)
     {
         var user = await _userRepository.GetUserById(id) ?? throw new NotFoundError("User not found");
@@ -100,7 +105,8 @@ public class UserService(IUserRepository userRepository, IPasswordHasher passwor
     {
         var user = await _userRepository.GetUserById(id) ?? throw new NotFoundError("User not found");
         user.RefreshToken = refreshToken;
-        return await _userRepository.UpdateUser(id, new Dictionary<string, object> { { nameof(user.RefreshToken), refreshToken } });
+        var userUpdated = await _userRepository.UpdateUser(id, new Dictionary<string, object> { { nameof(user.RefreshToken), refreshToken! } });
+        return userUpdated ?? throw new InternalServerError("Failed to update refresh token");
     }
 
 }
