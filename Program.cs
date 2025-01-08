@@ -14,17 +14,23 @@ var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddStackExchangeRedisCache(options => {
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+});
+
+builder.Services.AddSingleton<IRedisService, RedisService>();
+
 // Add services to the container.
-builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>(); // singleton
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
-builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IFileService, FileService>(); // add transient
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChatService, ChatService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IJwtService, JwtService>(); // singleton
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<JwtAccessTokenMiddleware>();
-builder.Services.AddScoped<JwtRefreshTokenMiddleware>();
+builder.Services.AddScoped<JwtAccessTokenMiddleware>(); // add transient
+builder.Services.AddScoped<JwtRefreshTokenMiddleware>(); //add transient
 
 // builder.Services.AddRouting(options =>
 // {
@@ -42,7 +48,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins,
         builder =>
         {
-            builder.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173", "http://10.25.12.226:5173")
+            builder.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173", "http://172.19.160.1:5173")
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
