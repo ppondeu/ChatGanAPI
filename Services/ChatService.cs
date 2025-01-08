@@ -4,14 +4,17 @@ using ChatApi.Entities;
 using ChatApi.Hubs;
 using ChatApi.Interfaces;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace ChatApi.Services;
 
-public class ChatService(IChatRepository chatRepository, IUserRepository userRepository, IHubContext<ChatHub> chatHub) : IChatService
+public class ChatService(IChatRepository chatRepository, IUserRepository userRepository, IHubContext<ChatHub> chatHub, IRedisService redis) : IChatService
 {
     private readonly IChatRepository _chatRepository = chatRepository;
     private readonly IUserRepository _userRepository = userRepository;
     private readonly IHubContext<ChatHub> _chatHub = chatHub;
+
+    private readonly IRedisService _redis = redis;
 
     public async Task<IEnumerable<Chat>> GetChats()
     {
@@ -20,12 +23,37 @@ public class ChatService(IChatRepository chatRepository, IUserRepository userRep
 
     public async Task<IEnumerable<Chat>> GetChats(Guid userId)
     {
-        return await _chatRepository.GetChats(userId);
+        var cacheKey = $"chat::{userId}::user";
+        var cacheChats = await _redis.GetCacheAsync<IEnumerable<Chat>>(cacheKey);
+        if (cacheChats == null)
+        {
+            var chats = await _chatRepository.GetChats(userId);
+            var options = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8)
+            };
+            await _redis.SetCacheAsync<IEnumerable<Chat>>(cacheKey, chats, options);
+            return chats;
+        }
+
+        return cacheChats;
     }
 
     public async Task<Chat> GetChat(Guid chatId)
     {
-        return await _chatRepository.GetChat(chatId) ?? throw new NotFoundError("Chat not found");
+        var cacheKey = $"chat::{chatId}::chat";
+        var cacheChat = await _redis.GetCacheAsync<Chat>(cacheKey);
+        if (cacheChat == null)
+        {
+            var chat = await _chatRepository.GetChat(chatId) ?? throw new NotFoundError("Chat not found");
+            var options = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8)
+            };
+            await _redis.SetCacheAsync<Chat>(cacheKey, chat, options);
+            return chat;
+        }
+        return cacheChat;
     }
 
     public async Task<Chat> CreateChat(string connectionId, string roomName, IEnumerable<string> otherMemberIds, Guid creatorId, string? image)
@@ -46,6 +74,17 @@ public class ChatService(IChatRepository chatRepository, IUserRepository userRep
             Members = members
         };
         var chatCreated = await _chatRepository.CreateChat(chat) ?? throw new InternalServerError("Failed to create chat");
+
+        var cacheKey = $"chat::{chatCreated.Id}::chat";
+        var options = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+        };
+        await _redis.SetCacheAsync<Chat>(cacheKey, chatCreated, options);
+
+        var userCacheKey = $"chat::{chatCreated.CreatorId}::user";
+        await _redis.RemoveCacheAsync(userCacheKey);
+
         await AddUserToGroup(chatCreated.Id, connectionId);
         await NotifyNotification(chatCreated.Id, $"You have been created a chat: {chatCreated.Name}");
         return chatCreated;
